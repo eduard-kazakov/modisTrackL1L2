@@ -1,0 +1,20 @@
+[general]
+name=MODIS Track L1 L2
+description=Helps to check out, which MODIS L1, L2 products scenes (Terra, Aqua) are match for needed region
+about=This module allows to create Terra/Aqua track at selected date as shapefile; to create extents of scenes for all track points at day as shapefile; to define needed scenes for user's vector layer. Space-track.org can be used for TLE retrieving
+version=1.0
+qgisMinimumVersion=2.0
+
+author=Eduard Kazakov
+email=silenteddie@gmail.com
+
+icon=icon.png
+
+tags=modis, terra, aqua, satellite track
+
+homepage=http://www.ekazakov.info/
+tracker=
+repository=
+
+experimental=False
+deprecated=False
