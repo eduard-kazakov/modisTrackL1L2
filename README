@@ -1,8 +1,7 @@
 /***************************************************************************
- MinkowskyDimCalculator
+ MODIS Track L1 L2
                                  A QGIS plugin
- Plugin calculates Minkowski dimension (also known as Minkowski–Bouligand
- dimension; box-counting dimension) for features of vector layer.
+ This module allows to create Terra/Aqua track at selected date as shapefile; to create extents of scenes for all track points at day as shapefile; to define needed scenes for user's vector layer. Space-track.org can be used for TLE retrieving
 
                               -------------------
         begin                : 2015-12-16
@@ -21,4 +20,3 @@
  ***************************************************************************/
 
  Put this folder at <homedir>/.qgis2/python/plugins/
- Manual available at: http://ekazakov.info/projects/mdc_tutorial.html
