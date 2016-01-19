@@ -4,6 +4,7 @@ from pyorbital.tlefile import ChecksumError
 import datetime
 from PyQt4.QtCore import *
 from qgis.core import *
+from PyQt4.QtGui import QApplication
 
 def create_orbital_track_shapefile_for_day (year, month, day, step_minutes, tle_line1, tle_line2, sat_name):
     try:
@@ -34,6 +35,7 @@ def create_orbital_track_shapefile_for_day (year, month, day, step_minutes, tle_
     i = 0
     minutes = 0
     while minutes < 1440:
+        QApplication.processEvents()
         utc_hour = int(minutes // 60)
         utc_minutes = int((minutes - (utc_hour*60)) // 1)
         utc_seconds = int(round((minutes - (utc_hour*60) - utc_minutes)*60))

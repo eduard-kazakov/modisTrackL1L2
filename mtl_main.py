@@ -41,12 +41,16 @@ import mtl_track_generator
 import mtl_extent_generator
 import mtl_lib
 import datetime
+import processing
+
 
 class MTLMainDlg(QtGui.QWidget):
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
         self.ui = modisTrack_main_ui.Ui_Dialog()
         self.ui.setupUi(self)
+
+        self.readyInterface()
 
         # Button's handlers
         self.connect(self.ui.closeButton, QtCore.SIGNAL("clicked()"), self.cancel)
@@ -116,10 +120,8 @@ class MTLMainDlg(QtGui.QWidget):
 
     def checkoutForObjectsStateChanged (self):
         if self.ui.checkoutForObjectsCheckBox.isChecked():
-            self.ui.onlySelectedCheckBox.setEnabled(True)
             self.ui.layersComboBox.setEnabled(True)
         else:
-            self.ui.onlySelectedCheckBox.setDisabled(True)
             self.ui.layersComboBox.setDisabled(True)
 
 
@@ -154,6 +156,8 @@ class MTLMainDlg(QtGui.QWidget):
         self.MTLSettingsDlg.show()
 
     def TLEAuto(self):
+        self.busyInterface()
+        QApplication.processEvents()
 
         try:
             dirPath = os.path.dirname(os.path.abspath(__file__))
@@ -162,6 +166,7 @@ class MTLMainDlg(QtGui.QWidget):
             password = re.sub("^\s+|\n|\r|\s+$", '', spacetrack_opt.readline())
         except:
             QtGui.QMessageBox.critical(None, "Error", 'Login and password are not set')
+            self.readyInterface()
             return
 
         userDate = self.ui.orbitDate.date()
@@ -177,16 +182,20 @@ class MTLMainDlg(QtGui.QWidget):
             tle1, tle2 = spacetrack_interface.get_spacetrack_tle_for_id_date(satId,userYear,userMonth,userDay,login,password)
         except (NameError):
             QtGui.QMessageBox.critical(None, "Error", 'Server is unavailable')
+            self.readyInterface()
             return
         except (urllib2.HTTPError):
             QtGui.QMessageBox.critical(None, "Error", 'Invalid inputs. Check date.')
+            self.readyInterface()
             return
         except:
             QtGui.QMessageBox.critical(None, "Error", 'Unable to recieve TLE')
+            self.readyInterface()
             return
 
         self.ui.TLELine1.setText(tle1)
         self.ui.TLELine2.setText(tle2)
+        self.readyInterface()
 
 
     # If "run" was pressed
@@ -212,15 +221,20 @@ class MTLMainDlg(QtGui.QWidget):
         userDay = userDate.day()
 
         # TRACK
+        self.busyInterface()
+        QApplication.processEvents()
+
         if self.ui.satellitePositionOutputCheckBox.isChecked():
 
             try:
                 trackLayer = mtl_track_generator.create_orbital_track_shapefile_for_day(userYear,userMonth,userDay,5,self.ui.TLELine1.text(),self.ui.TLELine2.text(),self.ui.satelliteComboBox.currentText())
             except (NameError):
                 QtGui.QMessageBox.critical(None, "Error", 'Invalid TLE')
+                self.readyInterface()
                 return
             except (TypeError):
                QtGui.QMessageBox.critical(None, "Error", 'Invalid Inputs')
+               self.readyInterface()
                return
 
             mtl_lib.saveVectorLayerToSHP(trackLayer,self.ui.satellitePositionOutputLine.text())
@@ -233,15 +247,101 @@ class MTLMainDlg(QtGui.QWidget):
                 sceneExtentsLayer = mtl_extent_generator.generateScenesExtentLayerForDay(userYear,userMonth,userDay,self.ui.TLELine1.text(),self.ui.TLELine2.text(),self.ui.satelliteComboBox.currentText(),self.ui.splitToMultuGeomCheckBox.isChecked())
             except (NameError):
                 QtGui.QMessageBox.critical(None, "Error", 'Invalid TLE')
+                self.readyInterface()
                 return
             except (TypeError):
                 QtGui.QMessageBox.critical(None, "Error", 'Invalid Inputs')
+                self.readyInterface()
                 return
 
             mtl_lib.saveVectorLayerToSHP(sceneExtentsLayer,self.ui.extentPolygonsOutputLine.text())
             if self.ui.addOutputsToProjectCheckBox.isChecked():
-                QgsMapLayerRegistry.instance().addMapLayer(sceneExtentsLayer)
+                extentLayerName = 'Scene\'s extents (' + self.ui.satelliteComboBox.currentText() + ': ' + str(userYear) + ':' + str(userMonth) + ':' + str(userDay) + ')'
+                extentsLayer = QgsVectorLayer(self.ui.extentPolygonsOutputLine.text(),extentLayerName,'ogr')
+                QgsMapLayerRegistry.instance().addMapLayer(extentsLayer)
 
+        # OBJECTS
+        if self.ui.checkoutForObjectsCheckBox.isChecked():
+            userLayer = mtl_lib.getLayerByName(self.ui.layersComboBox.currentText())
+            if userLayer.isValid() == False:
+                QtGui.QMessageBox.critical(None, "Error", 'Invalid input vector layer')
+                self.readyInterface()
+                return
+
+            if self.ui.extentPolygonsOutputCheckBox.isChecked() and self.ui.splitToMultuGeomCheckBox.isChecked():
+                pass
+            else:
+                sceneExtentsLayer = mtl_extent_generator.generateScenesExtentLayerForDay(userYear,userMonth,userDay,self.ui.TLELine1.text(),self.ui.TLELine2.text(),self.ui.satelliteComboBox.currentText(),True)
+
+            QgsMapLayerRegistry.instance().addMapLayer(sceneExtentsLayer)
+
+            WGS84 = QgsCoordinateReferenceSystem(4326, QgsCoordinateReferenceSystem.PostgisCrsId)
+            reproj = False
+            if userLayer.crs() != WGS84:
+                # Reproject userLayer to WGS84
+                try:
+                    userLayerReprojected = mtl_lib.reprojectVectorLayerToMemoryLayer(userLayer.crs(),WGS84,userLayer)
+                    QgsMapLayerRegistry.instance().addMapLayer(userLayerReprojected)
+                    reproj = True
+                except:
+                    pass
+
+            # Intersects
+            try:
+                if reproj:
+                    processing.runalg('qgis:selectbylocation',sceneExtentsLayer,userLayerReprojected,u'intersects',0)
+                else:
+                    processing.runalg('qgis:selectbylocation',sceneExtentsLayer,userLayer,u'intersects',0)
+            except:
+                QtGui.QMessageBox.critical(None, "Error", 'Processing must be enabled!')
+                self.readyInterface()
+                return
+
+            features = sceneExtentsLayer.selectedFeatures()
+            intersectsList = []
+            for f in features:
+                intersectsList.append(f[1])
+
+            # Contains
+            try:
+                if reproj:
+                    processing.runalg('qgis:selectbylocation',sceneExtentsLayer,userLayerReprojected,u'contains',0)
+                else:
+                    processing.runalg('qgis:selectbylocation',sceneExtentsLayer,userLayer,u'contains',0)
+            except:
+                QtGui.QMessageBox.critical(None, "Error", 'Processing must be enabled!')
+                self.readyInterface()
+                return
+
+            features = sceneExtentsLayer.selectedFeatures()
+            containsList = []
+            for f in features:
+                containsList.append(f[1])
+            QgsMapLayerRegistry.instance().removeMapLayer(sceneExtentsLayer.id())
+            if reproj:
+                QgsMapLayerRegistry.instance().removeMapLayer(userLayerReprojected.id())
+
+            resultText = 'Associated scenes: <br> '
+            for sceneTime in intersectsList:
+                resultText += sceneTime + '<br>'
+
+            self.ui.checkoutTextBox.setText(resultText)
+
+        self.readyInterface()
+
+    def busyInterface(self):
+        self.ui.progressBar.setVisible(True)
+        self.ui.ftpGroupBox.setDisabled(True)
+        self.ui.objectsGroupBox.setDisabled(True)
+        self.ui.orbitGroupBox.setDisabled(True)
+        self.ui.outputsGroupBox.setDisabled(True)
+
+    def readyInterface(self):
+        self.ui.progressBar.setVisible(False)
+        self.ui.ftpGroupBox.setEnabled(True)
+        self.ui.objectsGroupBox.setEnabled(True)
+        self.ui.orbitGroupBox.setEnabled(True)
+        self.ui.outputsGroupBox.setEnabled(True)
 
     # Close window by pressing "Cancel" button
     def cancel(self):

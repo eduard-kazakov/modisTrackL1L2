@@ -3,7 +3,7 @@ from qgis.core import *
 import mtl_track_generator
 import mtl_lib
 import math
-
+from PyQt4.QtGui import QApplication
 
 def generateTPEDProjection(lat1, lon1, lat2, lon2):
     crs = QgsCoordinateReferenceSystem()
@@ -109,6 +109,7 @@ def findDictIndexInList(lst, key, value):
 
 
 def generateSceneExtentForTrackLine(TrackLineFeature, WIDTH, sourceCRS, destCRS, splitBool):
+    CROSS_CONST = 200
     geom = TrackLineFeature.geometry().asPolyline()
 
     polyPoints = [QgsPoint(geom[0][0], geom[0][1] + WIDTH), QgsPoint(geom[1][0], geom[1][1] + WIDTH),
@@ -123,89 +124,108 @@ def generateSceneExtentForTrackLine(TrackLineFeature, WIDTH, sourceCRS, destCRS,
                  QgsPoint(geom[1][0], geom[1][1] - WIDTH), QgsPoint(geom[0][0], geom[0][1] - WIDTH),
                  QgsPoint(geom[0][0], geom[0][1] + WIDTH)], sourceCRS, destCRS)
 
-        Cross180 = False
+        crossBool = False
         crossNodes = []
-
-        # print WGSTestPoints
         i = 0
         while i < len(WGSTestPoints) - 1:
-            if math.fabs(WGSTestPoints[i][0] - WGSTestPoints[i + 1][0]) > 200:
-
-                Cross180 = True
-                A, B, C = getLineABCCoefficientsByTwoPoints(WGSTestPoints[i][0], WGSTestPoints[i][1],
-                                                            WGSTestPoints[i + 1][0], WGSTestPoints[i + 1][1])
-                xform = QgsCoordinateTransform(destCRS, sourceCRS)
-                if (WGSTestPoints[i][0] - WGSTestPoints[i + 1][0]) > 0:
-                    crossX = 179.999
-                    crossX2 = -179.999
-                else:
-                    crossX = -179.999
-                    crossX2 = 179.999
-
-                crossY = (-A * crossX - C) / B
-                try:
-                    x, y = xform.transform(crossX, crossY)
-                    x2, y2 = xform.transform(crossX2, crossY)
-                    crossNodes.append({'i': i, 'x': x, 'y': y, 'x2': x2, 'y2': y2})
-                except:
-                    i+=1
-                    continue
+            QApplication.processEvents()
+            if math.fabs(WGSTestPoints[i][0] - WGSTestPoints[i + 1][0]) > CROSS_CONST:
+                crossBool = True
             i += 1
 
-        if Cross180 and len(crossNodes) > 1:
-            crossPolyPoints = []
-            crossIds = []
-            i = 0
-            while i < len(polyPoints) - 1:
-                crossPolyPoints.append(QgsPoint(polyPoints[i][0], polyPoints[i][1]))
-                if findDictIndexInList(crossNodes, 'i', i) != -1:
-                    dictIndex = findDictIndexInList(crossNodes, 'i', i)
-                    x = crossNodes[dictIndex]['x']
-                    y = crossNodes[dictIndex]['y']
-                    x2 = crossNodes[dictIndex]['x2']
-                    y2 = crossNodes[dictIndex]['y2']
-                    crossPolyPoints.append(QgsPoint(x, y))
-                    crossIds.append(len(crossPolyPoints) - 1)
-                    crossPolyPoints.append(QgsPoint(x2, y2))
-
-                crossPolyPoints.append(QgsPoint(polyPoints[i + 1][0], polyPoints[i + 1][1]))
-                i += 1
-            i = 0
-            part = 1
-            crossFeaturePoints1 = []
-            crossFeaturePoints2 = []
-            while i < len(crossPolyPoints) - 1:
-                if (part == 1):
-                    if i in crossIds:
-                        crossFeaturePoints1.append(QgsPoint(crossPolyPoints[i][0], crossPolyPoints[i][1]))
-                        part = 2
-                    else:
-                        crossFeaturePoints1.append(QgsPoint(crossPolyPoints[i][0], crossPolyPoints[i][1]))
-                elif (part == 2):
-                    if i in crossIds:
-                        crossFeaturePoints2.append(QgsPoint(crossPolyPoints[i][0], crossPolyPoints[i][1]))
-                        part = 1
-                    else:
-                        crossFeaturePoints2.append(QgsPoint(crossPolyPoints[i][0], crossPolyPoints[i][1]))
-
-                i += 1
-
-            scene = QgsFeature()
-            scene.setGeometry(QgsGeometry.fromMultiPolygon([[reprojectPolyPoints(
-                addVertexesToPolyPoints(crossFeaturePoints1, 30), sourceCRS, destCRS), reprojectPolyPoints(
-                addVertexesToPolyPoints(crossFeaturePoints2, 30), sourceCRS, destCRS)]]))
-            return scene
+        # print WGSTestPoints
 
     ###############################################################
     ### End block
 
-
+    ###
 
     # add vertexes
-    polyPoints = reprojectPolyPoints(addVertexesToPolyPoints(polyPoints, 30), sourceCRS, destCRS)
+    polyPointsWithVertexes = addVertexesToPolyPoints(polyPoints, 30)
+
+    reprojectedPolyPointsWithVertexes = reprojectPolyPoints(polyPointsWithVertexes, sourceCRS, destCRS)
+
+    ### Block to split scenes intersects 180 longitude to multigeom
+    ###############################################################
+    if splitBool:
+        crossNodes = []
+        if crossBool:
+            i = 0
+
+            while i < len(reprojectedPolyPointsWithVertexes) - 1:
+                QApplication.processEvents()
+                if math.fabs(reprojectedPolyPointsWithVertexes[i][0] - reprojectedPolyPointsWithVertexes[i+1][0]) > CROSS_CONST:
+                    A, B, C = getLineABCCoefficientsByTwoPoints(reprojectedPolyPointsWithVertexes[i][0], reprojectedPolyPointsWithVertexes[i][1],
+                                                                reprojectedPolyPointsWithVertexes[i + 1][0], reprojectedPolyPointsWithVertexes[i + 1][1])
+
+                    if (reprojectedPolyPointsWithVertexes[i][0] - reprojectedPolyPointsWithVertexes[i+1][0]) > 0:
+                        crossX = 179.999
+                    else:
+                        crossX = -179.999
+
+                    try:
+                        crossY = (-A * crossX - C) / B
+                    except:
+                        crossY = 0
+
+                    try:
+                        crossNodes.append({'i': i, 'x': crossX, 'y': crossY, 'x2': -crossX, 'y2': crossY})
+                    except:
+                        i+=1
+                        continue
+
+                i += 1
+
+            if len(crossNodes) > 1:
+                crossPolyPoints = []
+                crossIds = []
+                i = 0
+                while i < len(reprojectedPolyPointsWithVertexes) - 1:
+                    QApplication.processEvents()
+                    crossPolyPoints.append(QgsPoint(reprojectedPolyPointsWithVertexes[i][0], reprojectedPolyPointsWithVertexes[i][1]))
+                    if findDictIndexInList(crossNodes, 'i', i) != -1:
+                        dictIndex = findDictIndexInList(crossNodes, 'i', i)
+                        x = crossNodes[dictIndex]['x']
+                        y = crossNodes[dictIndex]['y']
+                        x2 = crossNodes[dictIndex]['x2']
+                        y2 = crossNodes[dictIndex]['y2']
+                        crossPolyPoints.append(QgsPoint(x, y))
+                        crossIds.append(len(crossPolyPoints) - 1)
+                        crossPolyPoints.append(QgsPoint(x2, y2))
+
+                    crossPolyPoints.append(QgsPoint(reprojectedPolyPointsWithVertexes[i + 1][0], reprojectedPolyPointsWithVertexes[i + 1][1]))
+                    i += 1
+
+                i = 0
+                part = 1
+                crossFeaturePoints1 = []
+                crossFeaturePoints2 = []
+                while i < len(crossPolyPoints) - 1:
+                    QApplication.processEvents()
+                    if (part == 1):
+                        if i in crossIds:
+                            crossFeaturePoints1.append(QgsPoint(crossPolyPoints[i][0], crossPolyPoints[i][1]))
+                            part = 2
+                        else:
+                            crossFeaturePoints1.append(QgsPoint(crossPolyPoints[i][0], crossPolyPoints[i][1]))
+                    elif (part == 2):
+                        if i in crossIds:
+                            crossFeaturePoints2.append(QgsPoint(crossPolyPoints[i][0], crossPolyPoints[i][1]))
+                            part = 1
+                        else:
+                            crossFeaturePoints2.append(QgsPoint(crossPolyPoints[i][0], crossPolyPoints[i][1]))
+
+                    i += 1
+
+                scene = QgsFeature()
+                scene.setGeometry(QgsGeometry.fromMultiPolygon([[crossFeaturePoints1, crossFeaturePoints2]]))
+                return scene
+
+    ###############################################################
+    ### End block
 
     scene = QgsFeature()
-    scene.setGeometry(QgsGeometry.fromPolygon([polyPoints]))
+    scene.setGeometry(QgsGeometry.fromPolygon([reprojectedPolyPointsWithVertexes]))
     return scene
 
 
@@ -230,6 +250,7 @@ def generateScenesExtentLayerForDay(year, month, day, tle_line1, tle_line2, sat_
         j = 0
         trackPointsPack = []
         while j <= 1:
+            QApplication.processEvents()
             trackPointsPack.append(trackFeatures[i])
 
             j += 1
@@ -246,7 +267,7 @@ def generateScenesExtentLayerForDay(year, month, day, tle_line1, tle_line2, sat_
                                       round(trackPointsPack[1].geometry().asPoint()[0], 3))
         trackPackLine = generateLineWithPointFeatures(trackPointsPack, True, WGS84, TPED)
         scene = generateSceneExtentForTrackLine(trackPackLine, WIDTH, TPED, WGS84, splitBool)
-        scene.setAttributes([i, trackFeatures[i]['TIME']])
+        scene.setAttributes([i, trackFeatures[i-1]['TIME']])
         scenesExtentLayerDataProvider.addFeatures([scene])
 
     scenesExtentLayer.commitChanges()

@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'modisTrack_main_ui.ui'
 #
-# Created: Sun Jan 17 20:37:34 2016
+# Created: Mon Jan 18 03:51:53 2016
 #      by: PyQt4 UI code generator 4.10.2
 #
 # WARNING! All changes made in this file will be lost!
@@ -36,23 +36,6 @@ class Ui_Dialog(object):
         self.objectsGroupBox.setObjectName(_fromUtf8("objectsGroupBox"))
         self.gridLayout_3 = QtGui.QGridLayout(self.objectsGroupBox)
         self.gridLayout_3.setObjectName(_fromUtf8("gridLayout_3"))
-        self.checkoutForObjectsCheckBox = QtGui.QCheckBox(self.objectsGroupBox)
-        self.checkoutForObjectsCheckBox.setObjectName(_fromUtf8("checkoutForObjectsCheckBox"))
-        self.gridLayout_3.addWidget(self.checkoutForObjectsCheckBox, 0, 0, 1, 1)
-        spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
-        self.gridLayout_3.addItem(spacerItem, 5, 0, 1, 1)
-        self.layersComboBox = QtGui.QComboBox(self.objectsGroupBox)
-        self.layersComboBox.setEnabled(False)
-        self.layersComboBox.setObjectName(_fromUtf8("layersComboBox"))
-        self.gridLayout_3.addWidget(self.layersComboBox, 1, 0, 1, 1)
-        self.checkoutTextBox = QtGui.QTextBrowser(self.objectsGroupBox)
-        self.checkoutTextBox.setEnabled(False)
-        self.checkoutTextBox.setObjectName(_fromUtf8("checkoutTextBox"))
-        self.gridLayout_3.addWidget(self.checkoutTextBox, 4, 0, 1, 1)
-        self.onlySelectedCheckBox = QtGui.QCheckBox(self.objectsGroupBox)
-        self.onlySelectedCheckBox.setEnabled(False)
-        self.onlySelectedCheckBox.setObjectName(_fromUtf8("onlySelectedCheckBox"))
-        self.gridLayout_3.addWidget(self.onlySelectedCheckBox, 2, 0, 1, 1)
         self.horizontalLayout_2 = QtGui.QHBoxLayout()
         self.horizontalLayout_2.setObjectName(_fromUtf8("horizontalLayout_2"))
         self.closeButton = QtGui.QPushButton(self.objectsGroupBox)
@@ -62,9 +45,29 @@ class Ui_Dialog(object):
         self.runButton.setObjectName(_fromUtf8("runButton"))
         self.horizontalLayout_2.addWidget(self.runButton)
         self.gridLayout_3.addLayout(self.horizontalLayout_2, 6, 0, 1, 1)
+        self.checkoutForObjectsCheckBox = QtGui.QCheckBox(self.objectsGroupBox)
+        self.checkoutForObjectsCheckBox.setObjectName(_fromUtf8("checkoutForObjectsCheckBox"))
+        self.gridLayout_3.addWidget(self.checkoutForObjectsCheckBox, 0, 0, 1, 1)
         self.label_5 = QtGui.QLabel(self.objectsGroupBox)
         self.label_5.setObjectName(_fromUtf8("label_5"))
-        self.gridLayout_3.addWidget(self.label_5, 3, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.label_5, 2, 0, 1, 1)
+        self.checkoutTextBox = QtGui.QTextBrowser(self.objectsGroupBox)
+        self.checkoutTextBox.setEnabled(True)
+        self.checkoutTextBox.setObjectName(_fromUtf8("checkoutTextBox"))
+        self.gridLayout_3.addWidget(self.checkoutTextBox, 3, 0, 1, 1)
+        self.layersComboBox = QtGui.QComboBox(self.objectsGroupBox)
+        self.layersComboBox.setEnabled(False)
+        self.layersComboBox.setObjectName(_fromUtf8("layersComboBox"))
+        self.gridLayout_3.addWidget(self.layersComboBox, 1, 0, 1, 1)
+        spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+        self.gridLayout_3.addItem(spacerItem, 4, 0, 1, 1)
+        self.progressBar = QtGui.QProgressBar(self.objectsGroupBox)
+        self.progressBar.setMaximum(0)
+        self.progressBar.setProperty("value", -1)
+        self.progressBar.setOrientation(QtCore.Qt.Horizontal)
+        self.progressBar.setInvertedAppearance(False)
+        self.progressBar.setObjectName(_fromUtf8("progressBar"))
+        self.gridLayout_3.addWidget(self.progressBar, 5, 0, 1, 1)
         self.gridLayout_5.addWidget(self.objectsGroupBox, 0, 1, 3, 1)
         self.orbitGroupBox = QtGui.QGroupBox(Dialog)
         self.orbitGroupBox.setObjectName(_fromUtf8("orbitGroupBox"))
@@ -174,16 +177,15 @@ class Ui_Dialog(object):
     def retranslateUi(self, Dialog):
         Dialog.setWindowTitle(_translate("Dialog", "MODIS Track L1L2", None))
         self.objectsGroupBox.setTitle(_translate("Dialog", "Check out scenes for objects", None))
+        self.closeButton.setText(_translate("Dialog", "Close", None))
+        self.runButton.setText(_translate("Dialog", "Run", None))
         self.checkoutForObjectsCheckBox.setText(_translate("Dialog", "Objects from layer:", None))
+        self.label_5.setText(_translate("Dialog", "Output:", None))
         self.checkoutTextBox.setHtml(_translate("Dialog", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
 "</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8pt;\"><br /></p></body></html>", None))
-        self.onlySelectedCheckBox.setText(_translate("Dialog", "Only selected objects", None))
-        self.closeButton.setText(_translate("Dialog", "Close", None))
-        self.runButton.setText(_translate("Dialog", "Run", None))
-        self.label_5.setText(_translate("Dialog", "Output:", None))
         self.orbitGroupBox.setTitle(_translate("Dialog", "Orbit settings", None))
         self.label_2.setText(_translate("Dialog", "TLE line 1", None))
         self.label.setText(_translate("Dialog", "Date", None))
